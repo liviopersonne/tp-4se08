@@ -1,13 +1,14 @@
-from typing import NamedTuple
+from collections import namedtuple
 
-class SignalArgs(NamedTuple):
-    freq: int               # sampling frequency (in Hz)
-    pers_ratio: float       # persistence threshold (0-1 ratio)
-    buf_size: int           # size of the buffer window
-    rr_window: int          # size of the r-r window (between 2 peaks)
-    rr_min_size: float      # minimal r-r size
-    rr_max_size: float      # maximal r-r size
-    verbose: bool           # print debug messages
+SignalArgs = namedtuple('SignalArgs', [
+    'freq',         # sampling frequency (in Hz)
+    'pers_ratio',   # persistence threshold (0-1 ratio)
+    'buf_size',     # size of the buffer window
+    'rr_window',    # size of the r-r window (between 2 peaks)
+    'rr_min_size',  # minimal r-r size
+    'rr_max_size',  # maximal r-r size
+    'verbose',      # print debug messages
+])
 
 # ── Pre-treatement ──────────────────────────────────────────────────────────
 
@@ -82,6 +83,53 @@ def compute_persistence(sig):
 # ── Heartbeat computation ───────────────────────────────────────────────────
 
 # Computes the bpm of the signal using a sliding window
+def compute_bpm_stream(stream, signal_args: SignalArgs):
+    rr_buf    = []
+    last_peak = -1.0
+    start = 0
+    buf = []
+
+    for _ in range(signal_args.buf_size):
+        buf.append(next(stream))
+
+    while True:
+        val = next(stream)
+        buf.pop(0)
+        buf.append(val)
+        start += 1
+
+        pers_data = compute_persistence(buf)
+        if not pers_data:
+            continue
+
+        max_pers  = max(p['pers'] for p in pers_data)
+        threshold = signal_args.pers_ratio * max_pers
+        valid     = [p for p in pers_data if p['pers'] >= threshold]
+
+        for p in valid:
+            refined  = refine_peak(buf, p['idx'])
+            abs_samp = start + refined
+
+            if last_peak < 0:
+                last_peak = abs_samp
+                continue
+
+            interval_s = (abs_samp - last_peak) / signal_args.freq
+            if signal_args.rr_min_size <= interval_s <= signal_args.rr_max_size:
+                rr_buf.append(interval_s)
+                if len(rr_buf) > signal_args.rr_window:
+                    rr_buf.pop(0)
+                last_peak = abs_samp
+
+        med_rr = median(rr_buf)
+        if med_rr:
+            bpm_now  = 60.0 / med_rr
+            t_center = (start + signal_args.buf_size / 2) / signal_args.freq
+            if signal_args.verbose:
+                print(f"  t={t_center:6.1f}s  ->  {bpm_now:5.1f} BPM")
+            yield (t_center, bpm_now)
+
+# Computes the bpm of the signal using a sliding window
 def compute_bpm(signal, signal_args: SignalArgs):
     n         = len(signal)
     rr_buf    = []
@@ -110,7 +158,7 @@ def compute_bpm(signal, signal_args: SignalArgs):
                 continue
 
             interval_s = (abs_samp - last_peak) / signal_args.freq
-            if RR_MIN_S <= interval_s <= RR_MAX_S:
+            if signal_args.rr_min_size <= interval_s <= signal_args.rr_max_size:
                 rr_buf.append(interval_s)
                 if len(rr_buf) > signal_args.rr_window:
                     rr_buf.pop(0)
@@ -131,10 +179,3 @@ def compute_bpm(signal, signal_args: SignalArgs):
     bpm_final = round(median(all_bpms), 1) if all_bpms else None
     return bpm_final, bpm_series, peak_times
 
-# ── Parameters ──────────────────────────────────────────────────────────────
-FS_DEFAULT  = 90      # Hz (valeur du TP)
-PERS_RATIO  = 0.35    # seuil persistance (fraction du max observé)
-RR_MIN_S    = 0.30    # intervalle RR min → 200 BPM
-RR_MAX_S    = 2.00    # intervalle RR max → 30 BPM
-RR_WINDOW   = 8       # fenêtre médiane glissante
-BUF_SIZE    = 180     # 2 s à 90 Hz

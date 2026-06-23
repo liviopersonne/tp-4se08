@@ -57,10 +57,19 @@ if __name__ == '__main__':
         rr_window = 8,
         rr_min_size = 0.30,         # 200 BPM
         rr_max_size = 2.00,         # 30 BPM
-        verbose = False
+        verbose = True
     )
     
-    signal = list(noisy_stream)
-    bpm_final, bpm_series, peak_times = analysis.compute_bpm(signal, signal_args)
+    # from signal
+    # signal = list(noisy_stream)
+    # bpm_final, bpm_series, peak_times = analysis.compute_bpm(signal, signal_args)
     # print_summary(signal, 90, bpm_final, peak_times)
-    show_series(bpm_series)
+    # show_series(bpm_series)
+
+    # from stream
+    bpm_stream = analysis.compute_bpm_stream(clear_stream, signal_args)
+    try:
+        for bpm in bpm_stream:
+            print(bpm)
+    except RuntimeError:
+        pass

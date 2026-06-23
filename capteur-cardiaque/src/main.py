@@ -1,6 +1,7 @@
 from machine import Pin, ADC, Timer
 import utime
 from sample import sample_file_stream, add_noise
+import analysis
 
 sample = r"cardiac.txt"
 
@@ -49,5 +50,22 @@ if __name__ == '__main__':
     # show_adc(1000)
 
     # read and show sample file
-    for val in sample_simulation(sample, int(1e5)):
-        print(val)
+    # for val in sample_simulation(sample, int(1e5)):
+    #     print(val)
+
+    # compute bpm from dummy stream
+    dummy_stream = sample_simulation(sample, int(1e4))
+    noisy_stream = add_noise(dummy_stream, snr=3)
+    signal_args = analysis.SignalArgs(
+        freq = 90,
+        pers_ratio = 0.35,
+        buf_size = 180,             # 2s at 90 Hz
+        rr_window = 8,
+        rr_min_size = 0.30,         # 200 BPM
+        rr_max_size = 2.00,         # 30 BPM
+        verbose = False
+    )
+
+    bpm_stream = analysis.compute_bpm_stream(noisy_stream, signal_args)
+    for bpm in bpm_stream:
+        print(bpm)

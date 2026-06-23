@@ -1,4 +1,14 @@
 import random
+import math
+
+def gauss(mu=0.0, sigma=1.0):
+    u1 = random.random()
+    while u1 == 0.0:
+        u1 = random.random()
+    u2 = random.random()
+    z0 = math.sqrt(-2.0 * math.log(u1)) * math.cos(2 * math.pi * u2)
+    return mu + z0 * sigma
+
 
 # Stream the sample file (returns a generator)
 def sample_file_stream(filepath: str):
@@ -15,5 +25,5 @@ def sample_file_stream(filepath: str):
 # Add gaussian noise to a generator
 def add_noise(stream, snr=10):
     for value in stream:
-        noise = random.normalvariate(0, abs(value) / snr)
+        noise = gauss(0, abs(value) / snr)
         yield value + noise
