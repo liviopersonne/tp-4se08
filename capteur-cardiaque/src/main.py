@@ -1,5 +1,6 @@
 from machine import Pin, ADC, Timer
 import utime
+import os
 
 
 # Hardware components
@@ -20,11 +21,26 @@ def show_adc(period: int):
         elapsed = utime.ticks_diff(stop, start)
         utime.sleep_us(max(0, period - elapsed))
 
+def sample_file_read(filepath: str):
+    with open(filepath, 'r') as f:
+        for i, raw in enumerate(f):
+            line = raw.strip()
+            if not line or line.startswith('#'):
+                continue
+            try:
+                yield float(line)
+            except ValueError:
+                print(f"  [warn] ligne {i} ignorée : {line!r}")
+
 
 # Main
 if __name__ == '__main__':
     # blink
-    timer.init(freq=10, mode=Timer.PERIODIC, callback=blink)
+    # timer.init(freq=10, mode=Timer.PERIODIC, callback=blink)
     
     # read and print adc
-    show_adc(1000)
+    # show_adc(1000)
+
+    # read and show sample file
+    for l in sample_file_read(r"cardiac.txt"):
+        print(l)
