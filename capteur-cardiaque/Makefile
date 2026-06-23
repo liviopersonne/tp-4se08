@@ -1,6 +1,7 @@
-code := blink.py
 pyboard := ./utils/pyboard.py
 device := /dev/ttyACM0
+
+code := main.py
 
 all:
 	echo hello
