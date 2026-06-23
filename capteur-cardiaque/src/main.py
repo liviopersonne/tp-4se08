@@ -1,17 +1,23 @@
 from machine import Pin, ADC, Timer
 import utime
+from sample import sample_file_stream, add_noise
+
+sample = r"cardiac.txt"
 
 
-# Hardware components
+## Hardware components
 led = Pin(25, Pin.OUT)
 adc = ADC(Pin(26, mode=Pin.IN))
 timer = Timer()
 
 
-# Functions
+## Functions
+
+# Blink the screen periodically
 def blink(timer):
     led.toggle()
 
+# Print adc read values at a specific period
 def show_adc(period: int):
     while True:
         start = utime.ticks_us()
@@ -20,26 +26,23 @@ def show_adc(period: int):
         elapsed = utime.ticks_diff(stop, start)
         utime.sleep_us(max(0, period - elapsed))
 
-def sample_file_stream(filepath: str, period: int):
-    with open(filepath, 'r') as f:
-        for i, raw in enumerate(f):
+def sample_simulation(filepath: str, period: int):
+        stream = sample_file_stream(filepath)
+        for val in stream:
             start = utime.ticks_us()
-            line = raw.strip()
-            if not line or line.startswith('#'):
-                continue
-            try:
-                yield float(line)
-            except ValueError:
-                print(f"  [warn] ligne {i} ignorée : {line!r}")
+            yield val
             stop = utime.ticks_us()
             elapsed = utime.ticks_diff(stop, start)
             utime.sleep_us(max(0, period - elapsed))
 
-            
 
 
-# Main
+
+
+
+#~ Main
 if __name__ == '__main__':
+    ...
     # blink
     # timer.init(freq=10, mode=Timer.PERIODIC, callback=blink)
     
@@ -47,5 +50,5 @@ if __name__ == '__main__':
     # show_adc(1000)
 
     # read and show sample file
-    for val in sample_file_stream(r"cardiac.txt", int(1e5)):
+    for val in sample_simulation(sample, int(1e5)):
         print(val)
