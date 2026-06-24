@@ -1,23 +1,29 @@
-from machine import Pin, ADC, Timer
+from machine import Pin, SPI, PWM, Pin, ADC
 import utime
 from sample import sample_file_stream, add_noise
 import analysis
+from ST7735 import LCD_0inch96
+import framebuf
+import time
 
 sample = r"cardiac.txt"
 
 
 ## ── Hardware components ────────────────────────────────────────────────────
 
-led = Pin(25, Pin.OUT)
 adc = ADC(Pin(26, mode=Pin.IN))
-timer = Timer()
+
+# init screen
+RED = 0x00F8
+GREEN = 0xE007
+BLUE = 0x1F00
+WHITE = 0xFFFF
+BLACK = 0x0000
+lcd = LCD_0inch96()
+lcd.fill(BLACK)
 
 
 ## ── Functions ──────────────────────────────────────────────────────────────
-
-# Blink the screen periodically
-def blink(timer):
-    led.toggle()
 
 # Print adc read values at a specific period
 def show_adc(period: int):
@@ -38,14 +44,15 @@ def sample_simulation(filepath: str, period: int):
             elapsed = utime.ticks_diff(stop, start)
             utime.sleep_us(max(0, period - elapsed))
 
+def show_text():
+    lcd.text("TELECOM-PARIS!",35,15,GREEN)
+    lcd.text("This is:",50,35,RED)    
+    lcd.text("Pico-LCD-0.96",30,55,BLUE)
+    lcd.display() #this command launches the display
 
 ## ── Main ───────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
-    ...
-    # blink
-    # timer.init(freq=10, mode=Timer.PERIODIC, callback=blink)
-    
     # read and print adc
     # show_adc(1000)
 
@@ -54,18 +61,20 @@ if __name__ == '__main__':
     #     print(val)
 
     # compute bpm from dummy stream
-    dummy_stream = sample_simulation(sample, int(1e4))
-    noisy_stream = add_noise(dummy_stream, snr=3)
-    signal_args = analysis.SignalArgs(
-        freq = 90,
-        pers_ratio = 0.35,
-        buf_size = 180,             # 2s at 90 Hz
-        rr_window = 8,
-        rr_min_size = 0.30,         # 200 BPM
-        rr_max_size = 2.00,         # 30 BPM
-        verbose = False
-    )
+    # dummy_stream = sample_simulation(sample, int(1e4))
+    # noisy_stream = add_noise(dummy_stream, snr=3)
+    # signal_args = analysis.SignalArgs(
+    #     freq = 90,
+    #     pers_ratio = 0.35,
+    #     buf_size = 180,             # 2s at 90 Hz
+    #     rr_window = 8,
+    #     rr_min_size = 0.30,         # 200 BPM
+    #     rr_max_size = 2.00,         # 30 BPM
+    #     verbose = False
+    # )
+    # bpm_stream = analysis.compute_bpm_stream(noisy_stream, signal_args)
+    # for bpm in bpm_stream:
+    #     print(bpm)
 
-    bpm_stream = analysis.compute_bpm_stream(noisy_stream, signal_args)
-    for bpm in bpm_stream:
-        print(bpm)
+    # show text
+    show_text()
