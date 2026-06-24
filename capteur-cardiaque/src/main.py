@@ -8,7 +8,6 @@ import time
 
 sample = r"cardiac.txt"
 
-
 ## ── Hardware components ────────────────────────────────────────────────────
 
 adc = ADC(Pin(26, mode=Pin.IN))
@@ -35,13 +34,15 @@ def show_adc(period: int):
         utime.sleep_us(max(0, period - elapsed))
 
 # Simulate a signal using the sample
-def sample_simulation(filepath: str, period: int):
-        stream = sample_file_stream(filepath)
-        for val in stream:
-            start = utime.ticks_us()
-            yield val
-            stop = utime.ticks_us()
-            elapsed = utime.ticks_diff(stop, start)
+def sample_simulation(filepath: str, freq: int, buffered=True):
+    period = int(1e6 / freq)
+    stream = sample_file_stream(filepath)
+    for val in stream:
+        start = utime.ticks_us()
+        yield val
+        stop = utime.ticks_us()
+        elapsed = utime.ticks_diff(stop, start)
+        if buffered:
             utime.sleep_us(max(0, period - elapsed))
 
 def show_text():
@@ -75,6 +76,15 @@ def plot_graph(data, color=GREEN):
         x1, y1 = points[i + 1]
         lcd.line(x0, y0, x1, y1, color)
 
+def update_display(frame, bpm):
+    if frame % frame_skip == 0:
+        lcd.fill(BLACK)
+        plot_graph(display_window)
+        lcd.text(str(round(bpm,1)),10,15,RED)
+        lcd.display()
+
+    
+
 ## ── Main ───────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
@@ -86,34 +96,45 @@ if __name__ == '__main__':
     #     print(val)
 
     # compute bpm from dummy stream
-    dummy_stream = sample_simulation(sample, int(100))
+    display_window = []
+    display_window_max_size = 100
+    frame_skip = 7
+    freq = 90
+
+    dummy_stream = sample_simulation(sample, freq, buffered=False)
     noisy_stream = add_noise(dummy_stream, snr=3)
     signal_args = analysis.SignalArgs(
-        freq = 90,
+        freq = freq,
         pers_ratio = 0.35,
         buf_size = 180,             # 2s at 90 Hz
-        display_size = 100,
         rr_window = 8,
         rr_min_size = 0.30,         # 200 BPM
         rr_max_size = 2.00,         # 30 BPM
         verbose = False
     )
 
-    # print("ok")
 
-    display_window = []
-    bpm_stream = analysis.compute_bpm_stream(dummy_stream, signal_args, display_window)
-    for t, bpm in bpm_stream:
-        lcd.fill(BLACK)
-        plot_graph(display_window)
-        lcd.text(str(round(bpm,1)),10,15,RED)
-        lcd.display()
+    frame = 0
+    period = int(1e6 / freq)
+    bpm_stream = analysis.compute_bpm_stream(dummy_stream, signal_args)
+    for t, bpm, val in bpm_stream:
+        start = utime.ticks_us()
+
+        frame += 1
+        if len(display_window) == display_window_max_size:
+            display_window.pop(0)
+        display_window.append(val)
+        update_display(frame, bpm)
+
+        stop = utime.ticks_us()
+        elapsed = utime.ticks_diff(stop, start)
+        # utime.sleep_us(max(0, period - elapsed))
 
     # show text
     # show_text()
 
     # graph
-    stream = sample_simulation(sample, int(1))
+    stream = sample_simulation(sample, 90)
     data = []
     for i in range(100):
         data.append(next(stream))

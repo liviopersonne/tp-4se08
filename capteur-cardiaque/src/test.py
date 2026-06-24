@@ -69,7 +69,7 @@ if __name__ == '__main__':
     # from stream
     bpm_stream = analysis.compute_bpm_stream(clear_stream, signal_args)
     try:
-        for bpm in bpm_stream:
+        for i, bpm, val in bpm_stream:
             print(bpm)
     except RuntimeError:
         pass
