@@ -4,6 +4,7 @@ SignalArgs = namedtuple('SignalArgs', [
     'freq',         # sampling frequency (in Hz)
     'pers_ratio',   # persistence threshold (0-1 ratio)
     'buf_size',     # size of the buffer window
+    'display_size', # size of the display buffer
     'rr_window',    # size of the r-r window (between 2 peaks)
     'rr_min_size',  # minimal r-r size
     'rr_max_size',  # maximal r-r size
@@ -83,20 +84,29 @@ def compute_persistence(sig):
 # ── Heartbeat computation ───────────────────────────────────────────────────
 
 # Computes the bpm of the signal using a sliding window
-def compute_bpm_stream(stream, signal_args: SignalArgs):
+def compute_bpm_stream(stream, signal_args: SignalArgs, display_window=None):
     rr_buf    = []
     last_peak = -1.0
     start = 0
     buf = []
 
     for _ in range(signal_args.buf_size):
-        buf.append(next(stream))
+        val = next(stream)
+        buf.append(val)
+        if display_window is not None:
+            if len(display_window) == signal_args.display_size:
+                display_window.pop(0)
+            display_window.append(val)
 
     while True:
         val = next(stream)
         buf.pop(0)
         buf.append(val)
         start += 1
+        if display_window is not None:
+            if len(display_window) == signal_args.display_size:
+                display_window.pop(0)
+            display_window.append(val)
 
         pers_data = compute_persistence(buf)
         if not pers_data:

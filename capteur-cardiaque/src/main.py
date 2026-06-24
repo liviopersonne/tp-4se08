@@ -86,20 +86,28 @@ if __name__ == '__main__':
     #     print(val)
 
     # compute bpm from dummy stream
-    # dummy_stream = sample_simulation(sample, int(1e4))
-    # noisy_stream = add_noise(dummy_stream, snr=3)
-    # signal_args = analysis.SignalArgs(
-    #     freq = 90,
-    #     pers_ratio = 0.35,
-    #     buf_size = 180,             # 2s at 90 Hz
-    #     rr_window = 8,
-    #     rr_min_size = 0.30,         # 200 BPM
-    #     rr_max_size = 2.00,         # 30 BPM
-    #     verbose = False
-    # )
-    # bpm_stream = analysis.compute_bpm_stream(noisy_stream, signal_args)
-    # for bpm in bpm_stream:
-    #     print(bpm)
+    dummy_stream = sample_simulation(sample, int(100))
+    noisy_stream = add_noise(dummy_stream, snr=3)
+    signal_args = analysis.SignalArgs(
+        freq = 90,
+        pers_ratio = 0.35,
+        buf_size = 180,             # 2s at 90 Hz
+        display_size = 100,
+        rr_window = 8,
+        rr_min_size = 0.30,         # 200 BPM
+        rr_max_size = 2.00,         # 30 BPM
+        verbose = False
+    )
+
+    # print("ok")
+
+    display_window = []
+    bpm_stream = analysis.compute_bpm_stream(dummy_stream, signal_args, display_window)
+    for t, bpm in bpm_stream:
+        lcd.fill(BLACK)
+        plot_graph(display_window)
+        lcd.text(str(round(bpm,1)),10,15,RED)
+        lcd.display()
 
     # show text
     # show_text()
