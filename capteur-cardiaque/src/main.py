@@ -50,6 +50,31 @@ def show_text():
     lcd.text("Pico-LCD-0.96",30,55,BLUE)
     lcd.display() #this command launches the display
 
+def plot_graph(data, color=GREEN):
+    if not data:
+        lcd.display()
+        return
+
+    width = 160
+    height = 80
+
+    lo, hi = min(data), max(data)
+    span = hi - lo if hi != lo else 1
+
+    n = len(data)
+    # map each data point to an x pixel, spread evenly across the screen width
+    points = []
+    for i, val in enumerate(data):
+        x = int(i / (n - 1) * (width - 1)) if n > 1 else 0
+        y = height - 1 - int((val - lo) / span * (height - 1))  # flip y: 0 is top
+        points.append((x, y))
+
+    # draw connecting lines between consecutive points
+    for i in range(len(points) - 1):
+        x0, y0 = points[i]
+        x1, y1 = points[i + 1]
+        lcd.line(x0, y0, x1, y1, color)
+
 ## ── Main ───────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
@@ -77,4 +102,14 @@ if __name__ == '__main__':
     #     print(bpm)
 
     # show text
-    show_text()
+    # show_text()
+
+    # graph
+    stream = sample_simulation(sample, int(1))
+    data = []
+    for i in range(100):
+        data.append(next(stream))
+        lcd.fill(BLACK)
+        plot_graph(data)
+        lcd.text(str(i),10,15,RED)
+        lcd.display()
